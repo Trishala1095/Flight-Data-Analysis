@@ -1,0 +1,288 @@
+##################################################
+Passphrase-less SSH
+##################################################
+ssh-keygen -t rsa -P ""
+
+cp /home/hduser/.ssh/id_rsa.pub /home/hduser/.ssh/authorized_keys
+
+Copy the public key from master to slaves and vice versa using below command
+   cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+   cat ~/.ssh/id_rsa.pub 
+Now try ssh from Master to slaves, ssh should connect. Then Exit.
+
+
+##################################################
+jdk, hadoop installation on namenode and datanodes
+##################################################
+
+Ubuntu@Vm:$ sudo addgroup hadoop
+
+Ubuntu@Vm:$sudo adduser --ingroup hadoop hduser
+
+Ubuntu@Vm:$su hduser
+
+hduser@Vm:ssh-keygen -t rsa -P ""
+
+hduser@Vm:/home/ubunut$ cat $HOME/.ssh/id_rsa.pub >> $HOME/.ssh/authorized_keys
+
+1. Install jdk-8:
+   sudo apt-get update
+   sudo apt-get install openjdk-8-jdk
+
+2. Download and install hadoop-2.6.5
+   wget https://archive.apache.org/dist/hadoop/common/hadoop-2.6.5/hadoop-2.6.5.tar.gz
+   tar xvzf hadoop-2.6.5.tar.gz
+   sudo mv /home/hduser/hadoop-2.6.5 /usr/local/hadoop
+   sudo chown -R hduser:hadoop /usr/local/hadoop
+
+3. Environment Variables
+
+   Edit vi ~/.bashrc as follows:
+
+   #HADOOP VARIABLES START
+export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+export HADOOP_INSTALL=/usr/local/hadoop
+export PATH=$PATH:$HADOOP_INSTALL/bin
+export PATH=$PATH:$HADOOP_INSTALL/sbin
+export HADOOP_MAPRED_HOME=$HADOOP_INSTALL
+export HADOOP_COMMON_HOME=$HADOOP_INSTALL
+export HADOOP_HDFS_HOME=$HADOOP_INSTALL
+export YARN_HOME=$HADOOP_INSTALL
+export HADOOP_COMMON_LIB_NATIVE_DIR=$HADOOP_INSTALL/lib/native
+export HADOOP_OPTS="-Djava.library.path=$HADOOP_INSTALL/lib"
+#HADOOP VARIABLES END
+source ~/.bashrc
+
+4. Hadoop Configurations on all nodes:-
+        $HADOOP_CONF_DIR/hadoop-env.sh
+   (a) vi /usr/local/hadoop/etc/hadoop/hadoop-env.sh
+
+   # The java implementation to use.
+   export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+
+   (b) vi /usr/local/hadoop/etc/hadoop/core-site.xml
+
+   <configuration>
+   <property>
+     <name>fs.defaultFS</name>
+     <value>hdfs://Master:9000</value>
+   </property>
+</configuration>
+
+
+   (c) $HADOOP_CONF_DIR/yarn-site.xml
+       vi /usr/local/hadoop/etc/hadoop/yarn-site.xml
+
+    <configuration>
+
+<!-- Site specific YARN configuration properties -->
+
+<property>
+      <name>yarn.nodemanager.aux-services</name>
+      <value>mapreduce_shuffle</value>
+    </property>
+    <property>
+      <name>yarn.nodemanager.aux-services.mapreduce.shuffle.class</name>
+      <value>org.apache.hadoop.mapred.ShuffleHandler</value>
+    </property>
+    <property>
+      <name>yarn.resourcemanager.hostname</name>
+      <value>Master</value></property>
+</configuration>
+
+   (d) $HADOOP_CONF_DIR/mapred-site.xml
+       cp /usr/local/hadoop/etc/hadoop/mapred-site.xml.template /usr/local/hadoop/etc/hadoop/mapred-site.xml
+       vi /usr/local/hadoop/etc/hadoop/mapred-site.xml
+
+   <configuration>
+<property>
+     <name>mapreduce.jobtracker.address</name>
+     <value>Master:54311</value>
+   </property>
+   <property>
+     <name>mapreduce.framework.name</name>
+     <value>yarn</value>
+   </property>
+</configuration>
+
+5. NameNode Specific Configurations
+
+   (a) vi /etc/hosts
+
+   127.0.0.1 localhost
+
+# The following lines are desirable for IPv6 capable hosts
+::1 ip6-localhost ip6-loopback
+fe00::0 ip6-localnet
+ff00::0 ip6-mcastprefix
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters
+ff02::3 ip6-allhosts
+
+172.31.73.74 Master
+172.31.75.171 Slave1
+172.31.70.85 Slave2
+
+   (b) $HADOOP_CONF_DIR/hdfs-site.xml
+       vi /usr/local/hadoop/etc/hadoop/hdfs-site.xml
+
+
+  <configuration>
+<property>
+    <name>dfs.replication</name>
+    <value>3</value>
+  </property>
+  <property>
+    <name>dfs.namenode.name.dir</name>
+    <value>file:///usr/local/hadoop_system/hdfs/namenode</value>
+  </property>
+  <property>
+    <name>dfs.datanode.data.dir</name>
+    <value>file:///usr/local/hadoop_system/hdfs/datanode</value>
+  </property>
+  <property>
+    <name>dfs.datanode.data.dir</name>
+    <value>file:///usr/local/hadoop_system/hdfs/datanode1</value>
+  </property>
+</configuration>
+
+
+   (c) $HADOOP_CONF_DIR/masters
+       vi masters
+          Masters
+   (d) $HADOOP_CONF_DIR/slaves
+       vi slaves
+
+       Master
+       Slave1
+       Slave2
+ 
+   (e) Create namenode and datanode directories in HDFS:-
+`
+       sudo mkdir -p /usr/local/hadoop_system/hdfs/namenode
+       sudo mkdir -p /usr/local/hadoop_system/hdfs/datanode
+       sudo mkdir -p /usr/local/hadoop_system/hdfs/datanode1
+       
+       sudo chown -R hduser:hadoop /usr/local/hadoop_system
+
+
+6. Start Hadoop Cluster
+
+   hadoop namenode -format
+   hduser@ip-172-31-73-74:/usr/local/hadoop1/sbin$start-dfs.sh
+   $HADOOP_HOME/sbin/start-yarn.shhduser@ip-172-31-73-74:/usr/local/hadoop1/sbin$start-dfs.sh
+   hduser@ip-172-31-73-74:/usr/local/hadoop1/sbin$mr-jobhistory-daemon.sh start historyserver
+
+
+######################################################
+Oozie Installation/Build/Maven/MYSQL
+######################################################
+========================================================================
+MAVEN
+ sudo apt-get install maven
+ cd /usr/share/maven/conf
+ vi setting.xml
+========================================================================
+<settings>
+    <mirrors>
+        <mirror>
+          <id>centralhttps</id>
+          <mirrorOf>central</mirrorOf>
+          <name>Maven central https</name>
+          <url>http://insecure.repo1.maven.org/maven2/</url>
+        </mirror>
+      </mirrors>
+</settings>
+
+========================================================================
+Mysql
+sudo apt-get install mysql-server
+sudo apt-get install mysql-client
+sudo apt-get install libmysqlclient-dev
+sudo mysql_secure_installation
+
+sudo mysql
+ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'password';
+FLUSH PRIVILEGES;
+exit
+mysql -u root -p
+CREATE USER 'oozie'@'%' IDENTIFIED BY 'password';
+GRANT ALL PRIVILEGES ON oozie.* TO 'oozie'@'%';
+FLUSH PRIVILEGES;
+CREATE DATABASE oozie;
+exit;
+
+
+========================================================================oozie===================================================================
+wget https://archive.apache.org/dist/oozie/4.3.1/oozie-4.3.1.tar.gz
+tar -xvzf oozie-4.3.1.tar.gz
+vi oozie-4.3.1/pom.xml
+================================================================================================================================================
+hdfs dfs -mkdir /user
+   hdfs dfs -mkdir /user/hduser
+   hdfs dfs -put ./share /user/hduser
+================================================================================================================================================
+========================================================================oozie-site.xml========================================================================
+<property>
+    <name>oozie.service.JPAService.jdbc.driver</name>
+    <value>com.mysql.cj.jdbc.Driver</value>
+</property>
+<property>
+    <name>oozie.service.JPAService.jdbc.url</name>
+    <value>jdbc:mysql://localhost:3306/oozie?useSSL=false</value>
+  </property>
+<property>
+    <name>oozie.service.JPAService.jdbc.username</name>
+    <value>oozie</value>
+</property>
+<property>
+    <name>oozie.service.JPAService.jdbc.password</name>
+    <value>password</value>
+</property>
+<property>
+    <name>oozie.service.HadoopAccessorService.hadoop.configurations</name>
+    <value>*=/home/ubuntu/hadoop-2.6.5/etc/hadoop</value>
+</property>
+<property>
+   <name>oozie.service.WorkflowAppService.system.libpath</name>
+    <value>hdfs://master:9000/user/ubuntu/share/lib</value>
+</property>
+=================================================================================================================================================================
+mkdir libext
+cp ../hadoop-2.6.5/share/hadoop/*/lib/*.jar libext/
+ cp ../hadoop-2.6.5/share/hadoop/*/*.jar libext/
+wget https://repo1.maven.org/maven2/mysql/mysql-connector-java/8.0.11/mysql-connector-java-8.0.11.jar
+wget http://archive.cloudera.com/gplextras/misc/ext-2.2.zip
+mv servlet-api-2.5.jar servlet-api-2.5.jar.bak
+mv jsp-api-2.1.jar jsp-api-2.1.jar.bak
+mv jasper-compiler-5.5.23.jar jasper-compiler-5.5.23.jar.bak
+mv jasper-runtime-5.5.23.jar jasper-runtime-5.5.23.jar.bak
+mv slf4j-log4j12-1.7.5.jar slf4j-log4j12-1.7.5.jar.bak
+
+sudo apt-get install unzip
+sudo apt-get install zip
+
+bin/oozie-setup.sh prepare-war
+====================oozie-env.sh================================
+export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+export OOZIE_PREFIX=/usr/local/oozie/oozie-4.3.1
+# Set hadoop configuration path  
+export OOZIE_CONF_DIR=/usr/local/oozie/oozie-4.3.1/conf
+export OOZIE_HOME=/usr/local/oozie/oozie-4.3.1
+# add hadoop package 
+
+========================================================================
+################################examples################################
+
+ bin/ooziedb.sh create -sqlfile oozie.sql -run
+    bin/oozied.sh start
+    bin/oozie admin --oozie http://localhost:11000/oozie -status
+    tar xvzf oozie-examples.tar.gz examples/
+
+vi examples/apps/map-reduce/job.properties
+
+    hdfs dfs -put ~/oozie-4.3.1/examples /user/hduser/
+    bin/oozie job -oozie http://localhost:11000/oozie -config examples/apps/map-reduce/job.properties -run
+    bin/oozie job -oozie http://localhost:11000/oozie -info 0000000-201123063732543-oozie-ubun-W
+
+  

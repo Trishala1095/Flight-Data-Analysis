@@ -1,0 +1,135 @@
+
+<workflow-app xmlns="uri:oozie:workflow:0.2" name="Flight-Data-Analysis">
+    <start to="On-ScheduleFlight"/>
+    <action name="On-ScheduleFlight">
+      <map-reduce>
+        <job-tracker>${jobTracker}</job-tracker>
+           <name-node>${nameNode}</name-node>
+             <configuration>
+                <property>
+                   <name>mapred.job.queue.name</name>
+                   <value>${queueName}</value>
+                </property>
+                <property>
+                   <name>mapred.mapper.class</name>
+                   <value>ScheduleFMapper</value>
+                </property>
+                <property>
+                   <name>mapred.reducer.class</name>
+                   <value>ScheduleFReducer</value>
+                </property>
+                <property>
+                   <name>mapred.output.key.class</name>
+                   <value>org.apache.hadoop.io.Text</value>
+                </property>
+                <property>
+                   <name>mapred.output.value.class</name>
+                   <value>org.apache.hadoop.io.IntWritable</value>
+                </property>
+                <property>
+                  <name>mapred.map.tasks</name>
+                  <value>1</value>
+                </property>
+                <property>
+                   <name>mapred.input.dir</name>
+                   <value>/user/${wf:user()}/${input}</value>
+                </property>
+                <property>
+                   <name>mapred.output.dir</name>
+                   <value>/user/${wf:user()}/${output1}</value>
+                </property>
+           </configuration>
+      </map-reduce>
+      <ok to="AirportTaxi-InOutTime"/>
+      <error to="fail"/>
+    </action>
+    <action name="AirportTaxi-InOutTime">
+       <map-reduce>
+           <job-tracker>${jobTracker}</job-tracker>
+           <name-node>${nameNode}</name-node>
+           <configuration>
+              <property>
+                  <name>mapred.job.queue.name</name>
+                  <value>${queueName}</value>
+              </property>
+              <property>
+                  <name>mapred.mapper.class</name>
+                  <value>TaxiInOutTimeMapper</value>
+              </property>
+              <property>
+                  <name>mapred.reducer.class</name>
+                  <value>TaxiInOutTimeReducer</value>
+              </property>
+              <property>
+                  <name>mapred.output.key.class</name>
+                  <value>org.apache.hadoop.io.Text</value>
+              </property>
+              <property>
+                  <name>mapred.output.value.class</name>
+                  <value>org.apache.hadoop.io.IntWritable</value>
+              </property>
+              <property>
+                  <name>mapred.map.tasks</name>
+                  <value>1</value>
+              </property>
+              <property>
+                  <name>mapred.input.dir</name>
+                  <value>/user/${wf:user()}/${input}</value>
+              </property>
+              <property>
+                  <name>mapred.output.dir</name>
+                  <value>/user/${wf:user()}/${output2}</value>
+              </property>
+          </configuration>
+      </map-reduce>
+      <ok to="Cancellation-Cause"/>
+      <error to="fail"/>
+    </action>
+    <action name="Cancellation-Cause">
+      <map-reduce>
+          <job-tracker>${jobTracker}</job-tracker>
+          <name-node>${nameNode}</name-node>
+          <configuration>
+              <property>
+                  <name>mapred.job.queue.name</name>
+                  <value>${queueName}</value>
+              </property>
+              <property>
+                  <name>mapred.mapper.class</name>
+                  <value>CancellationFMapper</value>
+              </property>
+              <property>
+                  <name>mapred.reducer.class</name>
+                  <value>CancellationFReducer</value>
+              </property>
+              <property>
+                 <name>mapred.output.key.class</name>
+                 <value>org.apache.hadoop.io.Text</value>
+              </property>
+              <property>
+                 <name>mapred.output.value.class</name>
+                 <value>org.apache.hadoop.io.IntWritable</value>
+              </property>
+              <property>
+                <name>mapred.map.tasks</name>
+                <value>1</value>
+              </property>
+              <property>
+                  <name>mapred.input.dir</name>
+                  <value>/user/${wf:user()}/${input}</value>
+              </property>
+              <property>
+                  <name>mapred.output.dir</name>
+                  <value>/user/${wf:user()}/${output3}</value>
+              </property>
+          </configuration>
+      </map-reduce>
+      <ok to="end"/>
+      <error to="fail"/>
+    </action>
+    <kill name="fail">
+        <message>Job is failed, error message[${wf:errorMessage(wf:lastErrorNode())}]</message>
+    </kill>
+    <end name="end"/>
+</workflow-app>
+
